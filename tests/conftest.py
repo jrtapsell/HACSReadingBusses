@@ -22,41 +22,57 @@ def mock_config() -> dict:
 
 
 @pytest.fixture
-def mock_api_response() -> dict:
-    """Return mock API response."""
-    return {
-        "timestamp": "2026-05-31T21:30:00Z",
-        "location": "stop_12345",
-        "services": [
-            {
-                "line_name": "1",
-                "destination": "Reading Station",
-                "actual_departure_time": "14:30",
-                "expected_departure_time": "14:32",
-                "status": "ON_TIME",
-            },
-            {
-                "line_name": "2",
-                "destination": "Royal Berks Hospital",
-                "actual_departure_time": "14:45",
-                "expected_departure_time": "14:45",
-                "status": "ON_TIME",
-            },
-            {
-                "line_name": "3",
-                "destination": "Reading Town Centre",
-                "actual_departure_time": "15:00",
-                "expected_departure_time": "14:58",
-                "status": "DELAYED",
-            },
-        ],
-    }
+def mock_xml_response() -> str:
+    """Return mock XML API response."""
+    return """<?xml version="1.0" encoding="UTF-8"?>
+<Siri xmlns="http://www.siri.org.uk/siri" xmlns:sm="http://www.ifopt.org.uk/ifopt">
+  <ServiceDelivery>
+    <ResponseTimestamp>2026-05-31T21:30:00+01:00</ResponseTimestamp>
+    <StopMonitoringDelivery>
+      <ResponseTimestamp>2026-05-31T21:30:00+01:00</ResponseTimestamp>
+      <MonitoredStopVisit>
+        <RecordedAtTime>2026-05-31T21:30:00+01:00</RecordedAtTime>
+        <MonitoredVehicleJourney>
+          <LineRef>1</LineRef>
+          <DestinationName>Reading Station</DestinationName>
+          <MonitoredCall>
+            <ExpectedDepartureTime>2026-05-31T14:32:00+01:00</ExpectedDepartureTime>
+            <ActualDepartureTime>2026-05-31T14:30:00+01:00</ActualDepartureTime>
+          </MonitoredCall>
+        </MonitoredVehicleJourney>
+      </MonitoredStopVisit>
+      <MonitoredStopVisit>
+        <RecordedAtTime>2026-05-31T21:30:00+01:00</RecordedAtTime>
+        <MonitoredVehicleJourney>
+          <LineRef>2</LineRef>
+          <DestinationName>Royal Berks Hospital</DestinationName>
+          <MonitoredCall>
+            <ExpectedDepartureTime>2026-05-31T14:45:00+01:00</ExpectedDepartureTime>
+            <ActualDepartureTime>2026-05-31T14:45:00+01:00</ActualDepartureTime>
+          </MonitoredCall>
+        </MonitoredVehicleJourney>
+      </MonitoredStopVisit>
+      <MonitoredStopVisit>
+        <RecordedAtTime>2026-05-31T21:30:00+01:00</RecordedAtTime>
+        <MonitoredVehicleJourney>
+          <LineRef>3</LineRef>
+          <DestinationName>Reading Town Centre</DestinationName>
+          <MonitoredCall>
+            <ExpectedDepartureTime>2026-05-31T14:58:00+01:00</ExpectedDepartureTime>
+            <ActualDepartureTime>2026-05-31T15:00:00+01:00</ActualDepartureTime>
+          </MonitoredCall>
+        </MonitoredVehicleJourney>
+      </MonitoredStopVisit>
+    </StopMonitoringDelivery>
+  </ServiceDelivery>
+</Siri>
+"""
 
 
 @pytest.fixture
-def mock_aiohttp_response(mock_api_response):
+def mock_aiohttp_response(mock_xml_response):
     """Return mock aiohttp response."""
     mock_response = AsyncMock()
     mock_response.status = 200
-    mock_response.json = AsyncMock(return_value=mock_api_response)
+    mock_response.text = AsyncMock(return_value=mock_xml_response)
     return mock_response
