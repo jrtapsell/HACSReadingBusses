@@ -42,16 +42,17 @@ class ReadingBusNextServiceSensor(CoordinatorEntity, SensorEntity):
 
     @property
     def state(self):
-        """Return next service info."""
+        """Return next service time."""
         data = self.coordinator.data or {}
         services = data.get("next_times", [])
         if len(services) > self.index:
             service = services[self.index]
-            # Format: "Line 1 @ 14:30 (Expected: 14:32)"
-            line_name = service.get("line_name", "Unknown")
-            actual_time = service.get("actual_departure_time", "N/A")
-            expected_time = service.get("expected_departure_time", "N/A")
-            return f"{line_name} @ {actual_time} (Exp: {expected_time})"
+            # Show only the next bus timestamp in the main sensor state.
+            return (
+                service.get("actual_departure_time")
+                or service.get("expected_departure_time")
+                or "N/A"
+            )
         return "N/A"
 
     @property

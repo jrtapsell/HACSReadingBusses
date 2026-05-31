@@ -68,18 +68,17 @@ def test_sensor_state(mock_coordinator):
     sensor = ReadingBusNextServiceSensor(mock_coordinator, 0, "test_entry_id")
     state = sensor.state
 
-    assert "1" in state  # line name
-    assert "14:30" in state  # actual time
-    assert "14:32" in state  # expected time
+    assert state == "14:30"
 
 
 def test_sensor_state_all_services(mock_coordinator):
     """Test sensor state for all three services."""
+    expected_states = ["14:30", "14:45", "15:00"]
     for index in range(3):
         sensor = ReadingBusNextServiceSensor(mock_coordinator, index, "test_entry_id")
         state = sensor.state
-        assert state != "N/A"
-        assert "@" in state
+        assert state == expected_states[index]
+        assert "@" not in state
 
 
 def test_sensor_state_no_data(mock_coordinator):
