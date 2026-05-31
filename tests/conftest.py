@@ -13,6 +13,18 @@ from custom_components.reading_bus.const import (
 
 
 @pytest.fixture
+async def hass(tmp_path):
+    """Create a minimal Home Assistant instance for tests."""
+    hass = HomeAssistant(str(tmp_path))
+    await hass.async_start()
+    hass.config_entries = MagicMock()
+    try:
+        yield hass
+    finally:
+        await hass.async_stop()
+
+
+@pytest.fixture
 def mock_config() -> dict:
     """Return mock configuration."""
     return {

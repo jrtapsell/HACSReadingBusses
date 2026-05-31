@@ -64,7 +64,16 @@ class ReadingBusCoordinator(DataUpdateCoordinator):
             for visit in root.findall(".//siri:MonitoredStopVisit", ns):
                 try:
                     # Get line information
-                    line_ref = visit.findtext("siri:MonitoredVehicleJourney/siri:LineRef", namespaces=ns) or "Unknown"
+                    line_ref = visit.findtext(
+                        "siri:MonitoredVehicleJourney/siri:PublishedLineName",
+                        namespaces=ns,
+                    )
+                    if not line_ref or not line_ref.strip():
+                        line_ref = visit.findtext(
+                            "siri:MonitoredVehicleJourney/siri:LineRef",
+                            namespaces=ns,
+                        )
+                    line_ref = (line_ref or "Unknown").strip()
                     destination = visit.findtext(
                         "siri:MonitoredVehicleJourney/siri:DestinationName", namespaces=ns
                     ) or "Unknown"
@@ -78,6 +87,14 @@ class ReadingBusCoordinator(DataUpdateCoordinator):
                         "siri:MonitoredVehicleJourney/siri:MonitoredCall/siri:ActualDepartureTime",
                         namespaces=ns,
                     )
+                    aimed_time = visit.findtext(
+                        "siri:MonitoredVehicleJourney/siri:MonitoredCall/siri:AimedDepartureTime",
+                        namespaces=ns,
+                    )
+
+                    # If the service is not yet tracked, fall back to the aimed departure time.
+                    if not expected_time:
+                        expected_time = aimed_time
 
                     # Format times - extract just HH:MM from ISO format
                     expected_formatted = ReadingBusCoordinator._format_time(expected_time)

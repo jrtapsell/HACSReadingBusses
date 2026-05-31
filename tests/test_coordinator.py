@@ -65,6 +65,50 @@ EMPTY_XML_RESPONSE = """<?xml version="1.0" encoding="UTF-8"?>
 </Siri>
 """
 
+AIMED_ONLY_XML_RESPONSE = """<?xml version="1.0" encoding="UTF-8"?>
+<Siri xmlns="http://www.siri.org.uk/siri">
+  <ServiceDelivery>
+    <ResponseTimestamp>2026-05-31T21:30:00+01:00</ResponseTimestamp>
+    <StopMonitoringDelivery>
+      <ResponseTimestamp>2026-05-31T21:30:00+01:00</ResponseTimestamp>
+      <MonitoredStopVisit>
+        <RecordedAtTime>2026-05-31T21:30:00+01:00</RecordedAtTime>
+        <MonitoredVehicleJourney>
+          <LineRef>14</LineRef>
+          <DestinationName>Woodley</DestinationName>
+          <MonitoredCall>
+            <AimedDepartureTime>2026-05-31T23:00:00+01:00</AimedDepartureTime>
+          </MonitoredCall>
+        </MonitoredVehicleJourney>
+      </MonitoredStopVisit>
+    </StopMonitoringDelivery>
+  </ServiceDelivery>
+</Siri>
+"""
+
+PUBLISHED_LINE_NAME_XML = """<?xml version="1.0" encoding="UTF-8"?>
+<Siri xmlns="http://www.siri.org.uk/siri">
+  <ServiceDelivery>
+    <ResponseTimestamp>2026-05-31T21:30:00+01:00</ResponseTimestamp>
+    <StopMonitoringDelivery>
+      <ResponseTimestamp>2026-05-31T21:30:00+01:00</ResponseTimestamp>
+      <MonitoredStopVisit>
+        <RecordedAtTime>2026-05-31T21:30:00+01:00</RecordedAtTime>
+        <MonitoredVehicleJourney>
+          <LineRef>999</LineRef>
+          <PublishedLineName>14</PublishedLineName>
+          <DestinationName>Woodley</DestinationName>
+          <MonitoredCall>
+            <ExpectedDepartureTime>2026-05-31T23:00:00+01:00</ExpectedDepartureTime>
+            <ActualDepartureTime>2026-05-31T23:00:00+01:00</ActualDepartureTime>
+          </MonitoredCall>
+        </MonitoredVehicleJourney>
+      </MonitoredStopVisit>
+    </StopMonitoringDelivery>
+  </ServiceDelivery>
+</Siri>
+"""
+
 
 @pytest.mark.asyncio
 async def test_coordinator_initialization(hass, mock_config):
@@ -116,6 +160,51 @@ async def test_coordinator_parses_xml_correctly(hass, mock_config):
         assert service["destination"] == "Reading Station"
         assert service["expected_departure_time"] == "14:32"
         assert service["actual_departure_time"] == "14:30"
+
+
+@pytest.mark.asyncio
+async def test_coordinator_prefers_published_line_name(hass, mock_config):
+    """Test coordinator prefers PublishedLineName over LineRef."""
+    coordinator = ReadingBusCoordinator(hass, mock_config)
+
+    with patch("aiohttp.ClientSession.get") as mock_get:
+        mock_response = AsyncMock()
+        mock_response.status = 200
+        mock_response.text = AsyncMock(return_value=PUBLISHED_LINE_NAME_XML)
+        mock_response.__aenter__.return_value = mock_response
+        mock_get.return_value.__aenter__.return_value = mock_response
+
+        data = await coordinator._async_update_data()
+
+        assert len(data["next_times"]) == 1
+        service = data["next_times"][0]
+        assert service["line_name"] == "14"
+        assert service["destination"] == "Woodley"
+        assert service["expected_departure_time"] == "23:00"
+        assert service["actual_departure_time"] == "23:00"
+
+
+@pytest.mark.asyncio
+async def test_coordinator_uses_aimed_departure_time_when_tracking_unavailable(hass, mock_config):
+    """Test coordinator falls back to aimed departure time when no tracking is available."""
+    coordinator = ReadingBusCoordinator(hass, mock_config)
+
+    with patch("aiohttp.ClientSession.get") as mock_get:
+        mock_response = AsyncMock()
+        mock_response.status = 200
+        mock_response.text = AsyncMock(return_value=AIMED_ONLY_XML_RESPONSE)
+        mock_response.__aenter__.return_value = mock_response
+        mock_get.return_value.__aenter__.return_value = mock_response
+
+        data = await coordinator._async_update_data()
+
+        assert len(data["next_times"]) == 1
+        service = data["next_times"][0]
+        assert service["line_name"] == "14"
+        assert service["destination"] == "Woodley"
+        assert service["expected_departure_time"] == "23:00"
+        assert service["actual_departure_time"] == "23:00"
+        assert service["status"] == "ON_TIME"
 
 
 @pytest.mark.asyncio
